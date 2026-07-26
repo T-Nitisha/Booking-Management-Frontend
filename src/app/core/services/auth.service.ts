@@ -22,9 +22,47 @@ export class AuthService {
 
   readonly currentUser = signal<AppUser | null>(this.loadStoredUser());
 
-  initializeGoogleSignIn(onSignedIn: () => void): void {
-    if (typeof google === 'undefined') {
-      console.warn('Google Identity Services script not loaded yet.');
+  private gsiReadyPromise: Promise<void> | null = null;
+
+  /// <summary>
+  /// The GSI script tag in index.html is loaded with async/defer, so it may not
+  /// have executed yet when Angular components initialize. This polls for the
+  /// global `google` object instead of assuming it's already present.
+  /// </summary>
+  private waitForGsi(): Promise<void> {
+    if (this.gsiReadyPromise) {
+      return this.gsiReadyPromise;
+    }
+
+    this.gsiReadyPromise = new Promise((resolve, reject) => {
+      const timeoutMs = 10000;
+      const intervalMs = 50;
+      let elapsed = 0;
+
+      const check = () => {
+        if (typeof google !== 'undefined' && google?.accounts?.id) {
+          resolve();
+          return;
+        }
+        elapsed += intervalMs;
+        if (elapsed >= timeoutMs) {
+          reject(new Error('Google Identity Services script failed to load in time.'));
+          return;
+        }
+        setTimeout(check, intervalMs);
+      };
+
+      check();
+    });
+
+    return this.gsiReadyPromise;
+  }
+
+  async initializeGoogleSignIn(onSignedIn: () => void): Promise<void> {
+    try {
+      await this.waitForGsi();
+    } catch (err) {
+      console.error(err);
       return;
     }
 
@@ -37,8 +75,11 @@ export class AuthService {
     });
   }
 
-  renderSignInButton(parentElement: HTMLElement): void {
-    if (typeof google === 'undefined') {
+  async renderSignInButton(parentElement: HTMLElement): Promise<void> {
+    try {
+      await this.waitForGsi();
+    } catch (err) {
+      console.error(err);
       return;
     }
     google.accounts.id.renderButton(parentElement, { theme: 'outline', size: 'large' });

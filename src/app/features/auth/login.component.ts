@@ -30,7 +30,7 @@ export class LoginComponent implements AfterViewInit {
   constructor(private readonly authService: AuthService, private readonly router: Router) {}
 
   ngAfterViewInit(): void {
-    this.authService.initializeGoogleSignIn(() => this.router.navigate(['/patient']));
-    this.authService.renderSignInButton(this.googleButton.nativeElement);
+    void this.authService.initializeGoogleSignIn(() => this.router.navigate(['/patient']));
+    void this.authService.renderSignInButton(this.googleButton.nativeElement);
   }
 }
