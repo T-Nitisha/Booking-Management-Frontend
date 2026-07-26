@@ -1,1 +1,12 @@
+@if (authService.currentUser(); as user) {
+  <nav class="top-nav">
+    <a routerLink="/patient">Book Appointment</a>
+    @if (user.role === 'Admin') {
+      <a routerLink="/admin">Admin</a>
+    }
+    <span class="spacer"></span>
+    <span class="user">{{ user.name }} ({{ user.role }})</span>
+    <button (click)="signOut()">Sign out</button>
+  </nav>
+}
 <router-outlet></router-outlet>

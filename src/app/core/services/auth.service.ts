@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { environment } from '../../../environments/environment';
+import { ApiService } from './api.service';
 
 declare const google: any;
 
@@ -7,6 +8,7 @@ export interface AppUser {
   idToken: string;
   email: string;
   name: string;
+  role: 'Patient' | 'Doctor' | 'Admin';
 }
 
 /// <summary>
@@ -23,6 +25,8 @@ export class AuthService {
   readonly currentUser = signal<AppUser | null>(this.loadStoredUser());
 
   private gsiReadyPromise: Promise<void> | null = null;
+
+  constructor(private readonly api: ApiService) {}
 
   /// <summary>
   /// The GSI script tag in index.html is loaded with async/defer, so it may not
@@ -99,9 +103,30 @@ export class AuthService {
 
   private handleCredential(idToken: string): void {
     const payload = this.decodeJwtPayload(idToken);
-    const user: AppUser = { idToken, email: payload.email, name: payload.name };
+    const user: AppUser = { idToken, email: payload.email, name: payload.name, role: 'Patient' };
     localStorage.setItem(AuthService.StorageKey, JSON.stringify(user));
     this.currentUser.set(user);
+    this.refreshRole();
+  }
+
+  /// <summary>
+  /// The Google ID token has no concept of our app roles, so once signed in we
+  /// ask the backend (which resolves Patient/Doctor/Admin from its own tables)
+  /// and patch the cached user with the real role.
+  /// </summary>
+  private refreshRole(): void {
+    this.api.getMe().subscribe({
+      next: me => {
+        const current = this.currentUser();
+        if (!current) {
+          return;
+        }
+        const updated: AppUser = { ...current, role: me.role };
+        localStorage.setItem(AuthService.StorageKey, JSON.stringify(updated));
+        this.currentUser.set(updated);
+      },
+      error: err => console.error('Failed to resolve app role', err)
+    });
   }
 
   private loadStoredUser(): AppUser | null {

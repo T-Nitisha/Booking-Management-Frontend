@@ -1,0 +1,22 @@
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+
+  a {
+    text-decoration: none;
+    color: #1a73e8;
+    font-weight: 500;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .user {
+    color: #555;
+    font-size: .9rem;
+  }
+}
